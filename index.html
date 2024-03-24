@@ -11,16 +11,12 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background-color: #f4f4f4;
     }
 
     #container {
       max-width: 1000px;
       margin: 20px auto;
       padding: 20px;
-      background-color: #fff;
-      border-radius: 5px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
 
     input[type="text"],
@@ -43,14 +39,31 @@
     }
 
     #messages {
-      border: 1px solid #ccc;
       padding: 10px;
       margin-top: 10px;
-      max-height: 600px;
+      max-height: 500px;
       overflow-y: auto;
     }
+
     #messageInput {
       width: 600px;
+    }
+
+    .chat {
+      display: flex;
+      width: 100%;
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+
+    .left {
+      float: left;
+      width: 30%;
+    }
+
+    .right {
+      float: right;
+      width: 70%;
     }
   </style>
 </head>
@@ -63,40 +76,52 @@
       <input type="text" id="username" placeholder="用户名">
       <button onclick="createRoom()">打开房间</button>
     </div>
-    <!-- 聊天消息 -->
-    <div id="msg" style="display: none;">
-      <div id="messages"></div>
-      <input type="text" id="messageInput" placeholder="请输入消息" onkeydown="handleKeyPress(event)">
-      <button onclick="sendMessage()">Send</button>
+    <div id="msg" class="chat" style="display: none;">
+      <div id="room" style="border: none; font-size: 30px"></div>
+      <div>
+        <div class="left">
+          <label>在线用户：</label>
+          <ol id="online"></ol>
+        </div>
+        <div class="right">
+          <!-- 聊天消息 -->
+          <div id="messages"></div>
+          <input type="text" id="messageInput" placeholder="请输入消息" onkeydown="handleKeyPress(event)">
+          <button onclick="sendMessage()">Send</button>
+        </div>
+      </div>
     </div>
   </div>
 
+
   <script>
     function getRandomColor() {
-        var letters = '0123456789ABCDEF';
-        var color = '#';
-        for (var i = 0; i < 6; i++) {
-            color += letters[Math.floor(Math.random() * 16)];
-        }
-        return color;
+      var letters = '0123456789ABCDEF';
+      var color = '#';
+      for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
     }
     var my_color = getRandomColor();
     const socket = io();
 
     // 创建房间
     function createRoom() {
-      const roomName = document.getElementById('roomName').value.trim();
-      if (roomName !== '') {
-        socket.emit('createRoom', roomName);
+      const room = document.getElementById('roomName').value.trim();
+      const user = document.getElementById('username').value.trim();
+      if (room !== '') {
+        socket.emit('createRoom', { room, user });
       }
       document.getElementById("create").style.display = 'none';
       document.getElementById("msg").style.display = 'block';
+      document.getElementById("room").innerHTML = `房间号：${room}`;
     }
 
     // 发送消息
     function sendMessage() {
       const messageInput = document.getElementById('messageInput');
-      const message = `<b style="color: ${my_color}">${document.getElementById('username').value.trim()}</b> <br> ${messageInput.value.trim()}`;
+      const message = `<p><b style="color: ${my_color}">${document.getElementById('username').value.trim()}</b> <br> ${messageInput.value.trim()}</p>`;
       const room = document.getElementById('roomName').value.trim(); // 房间名即为创建时输入的名字
       if (message !== '') {
         socket.emit('sendMessage', { room, message });
@@ -107,13 +132,40 @@
     // 接收消息
     socket.on('messageReceived', (message) => {
       const messagesDiv = document.getElementById('messages');
-      messagesDiv.innerHTML += `<p>${message}</p>`;
+      messagesDiv.innerHTML += message;
       messagesDiv.scrollTop = messagesDiv.scrollHeight; // 滚动到底部
     });
 
+    function updateOnline(users) {
+      const online = document.getElementById('online');
+      var lis = "";
+      users.forEach(element => {
+        lis += `<li>${element}</li>`;
+      });
+      online.innerHTML = lis;
+    }
+
     // 房间创建成功
-    socket.on('roomCreated', (roomName) => {
-      console.log(`Room "${roomName}" created`);
+    socket.on('roomCreated', (_data) => {
+      const { user, users } = _data;
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.innerHTML += `<p style="color: green">User add ${user}</p>`;
+      messagesDiv.scrollTop = messagesDiv.scrollHeight; // 滚动到底部
+      updateOnline(users);
+    });
+    // 历史消息
+    socket.on('history', (_msg) => {
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.innerHTML = _msg;
+      messagesDiv.scrollTop = messagesDiv.scrollHeight; // 滚动到底部
+    });
+    // 用户退出
+    socket.on('userquit', (_data) => {
+      const { user, users } = _data;
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.innerHTML += `<p style="color: red">User quit ${user}</p>`;
+      messagesDiv.scrollTop = messagesDiv.scrollHeight; // 滚动到底部
+      updateOnline(users);
     });
 
     function handleKeyPress(event) {

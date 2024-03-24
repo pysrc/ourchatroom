@@ -6,41 +6,69 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIo(server);
 
-// 存储房间信息
+// 存储房间信息, room: [socketid]
 const rooms = {};
+
+// 存用户信息
+const users = {}
+
+// 存在线用户信息
+// room: [user]
+const onlines = {}
+
+// 存房间历史会话
+const historys = {}
 
 // 处理连接
 io.on('connection', (socket) => {
   console.log('A user connected');
 
   // 创建房间
-  socket.on('createRoom', (roomName) => {
-    if (!rooms[roomName]) {
-      rooms[roomName] = [];
+  socket.on('createRoom', (_data) => {
+    var {room, user} = _data;
+    users[socket.id] = _data;
+    if (!rooms[room]) {
+      rooms[room] = [];
+      onlines[room] = []
+      historys[room] = "";
     }
-    rooms[roomName].push(socket.id);
-    socket.join(roomName);
-    io.to(roomName).emit('roomCreated', roomName);
-    console.log(`Room "${roomName}" created`);
+    rooms[room].push(socket.id);
+    onlines[room].push(user);
+    socket.join(room);
+    io.to(room).emit('roomCreated', {user, users: onlines[room]});
+    // 首次加入推送历史会话
+    io.to(socket.id).emit("history", historys[room]);
+    console.log(`Room "${room}" created`);
   });
 
   // 处理消息
   socket.on('sendMessage', (data) => {
     const { room, message } = data;
+    historys[room] += message;
     io.to(room).emit('messageReceived', message);
   });
 
   // 处理断开连接
   socket.on('disconnect', () => {
     console.log('User disconnected');
-    // 清理房间信息
-    Object.keys(rooms).forEach((roomName) => {
-      rooms[roomName] = rooms[roomName].filter((id) => id !== socket.id);
-      if (rooms[roomName].length === 0) {
-        delete rooms[roomName];
-        console.log(`Room "${roomName}" deleted`);
+    var curu = users[socket.id];
+    if (curu) {
+      var { room, user } = users[socket.id];
+      delete users[socket.id];
+      // 删除在线用户
+      onlines[room] = onlines[room].filter((_user) => _user !== user);
+      if (onlines[room].length === 0) {
+        delete onlines[room];
       }
-    });
+      io.to(room).emit('userquit', {user, users: onlines[room]});
+      // 清理房间信息
+      rooms[room] = rooms[room].filter((id) => id !== socket.id);
+      if (rooms[room].length === 0) {
+        delete rooms[room];
+        delete historys[room];
+        console.log(`Room "${room}" deleted`);
+      }
+    }
   });
 });
 

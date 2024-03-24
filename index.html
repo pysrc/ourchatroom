@@ -13,6 +13,7 @@
       padding: 0;
       background-color: #f4f4f4;
     }
+
     #container {
       max-width: 600px;
       margin: 20px auto;
@@ -21,21 +22,26 @@
       border-radius: 5px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
-    input[type="text"], button {
+
+    input[type="text"],
+    button {
       padding: 10px;
       margin: 5px;
       border: 1px solid #ccc;
       border-radius: 5px;
       font-size: 16px;
     }
+
     button {
       background-color: #007bff;
       color: #fff;
       cursor: pointer;
     }
+
     button:hover {
       background-color: #0056b3;
     }
+
     #messages {
       border: 1px solid #ccc;
       padding: 10px;
@@ -55,9 +61,11 @@
       <button onclick="createRoom()">打开房间</button>
     </div>
     <!-- 聊天消息 -->
-    <div id="messages"></div>
-    <input type="text" id="messageInput" placeholder="请输入消息">
-    <button onclick="sendMessage()">Send</button>
+    <div id="msg" style="display: none;">
+      <div id="messages"></div>
+      <input type="text" id="messageInput" placeholder="请输入消息" onkeydown="handleKeyPress(event)">
+      <button onclick="sendMessage()">Send</button>
+    </div>
   </div>
 
   <script>
@@ -70,6 +78,7 @@
         socket.emit('createRoom', roomName);
       }
       document.getElementById("create").style.display = 'none';
+      document.getElementById("msg").style.display = 'block';
     }
 
     // 发送消息
@@ -87,12 +96,19 @@
     socket.on('messageReceived', (message) => {
       const messagesDiv = document.getElementById('messages');
       messagesDiv.innerHTML += `<p>${message}</p>`;
+      messagesDiv.scrollTop = messagesDiv.scrollHeight; // 滚动到底部
     });
 
     // 房间创建成功
     socket.on('roomCreated', (roomName) => {
       console.log(`Room "${roomName}" created`);
     });
+
+    function handleKeyPress(event) {
+      if (event.keyCode === 13) { // 如果按下的是回车键的键码（keyCode为13）
+        sendMessage(); // 调用发送消息的函数
+      }
+    }
   </script>
 </body>
 

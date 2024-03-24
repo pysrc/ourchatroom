@@ -15,7 +15,7 @@
     }
 
     #container {
-      max-width: 600px;
+      max-width: 1000px;
       margin: 20px auto;
       padding: 20px;
       background-color: #fff;
@@ -46,8 +46,11 @@
       border: 1px solid #ccc;
       padding: 10px;
       margin-top: 10px;
-      max-height: 300px;
+      max-height: 600px;
       overflow-y: auto;
+    }
+    #messageInput {
+      width: 600px;
     }
   </style>
 </head>
@@ -69,6 +72,15 @@
   </div>
 
   <script>
+    function getRandomColor() {
+        var letters = '0123456789ABCDEF';
+        var color = '#';
+        for (var i = 0; i < 6; i++) {
+            color += letters[Math.floor(Math.random() * 16)];
+        }
+        return color;
+    }
+    var my_color = getRandomColor();
     const socket = io();
 
     // 创建房间
@@ -84,7 +96,7 @@
     // 发送消息
     function sendMessage() {
       const messageInput = document.getElementById('messageInput');
-      const message = `<b>${document.getElementById('username').value.trim()}</b> <br> ${messageInput.value.trim()}`;
+      const message = `<b style="color: ${my_color}">${document.getElementById('username').value.trim()}</b> <br> ${messageInput.value.trim()}`;
       const room = document.getElementById('roomName').value.trim(); // 房间名即为创建时输入的名字
       if (message !== '') {
         socket.emit('sendMessage', { room, message });
@@ -109,6 +121,7 @@
         sendMessage(); // 调用发送消息的函数
       }
     }
+
   </script>
 </body>
 

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chat Room</title>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+    }
+    #container {
+      max-width: 600px;
+      margin: 20px auto;
+      padding: 20px;
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    input[type="text"], button {
+      padding: 10px;
+      margin: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    button {
+      background-color: #007bff;
+      color: #fff;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #messages {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin-top: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="container">
+    <!-- 创建房间 -->
+    <div id="create">
+      <input type="text" id="roomName" placeholder="房间号">
+      <input type="text" id="username" placeholder="用户名">
+      <button onclick="createRoom()">打开房间</button>
+    </div>
+    <!-- 聊天消息 -->
+    <div id="messages"></div>
+    <input type="text" id="messageInput" placeholder="请输入消息">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+
+  <script>
+    const socket = io();
+
+    // 创建房间
+    function createRoom() {
+      const roomName = document.getElementById('roomName').value.trim();
+      if (roomName !== '') {
+        socket.emit('createRoom', roomName);
+      }
+      document.getElementById("create").style.display = 'none';
+    }
+
+    // 发送消息
+    function sendMessage() {
+      const messageInput = document.getElementById('messageInput');
+      const message = `<b>${document.getElementById('username').value.trim()}</b> <br> ${messageInput.value.trim()}`;
+      const room = document.getElementById('roomName').value.trim(); // 房间名即为创建时输入的名字
+      if (message !== '') {
+        socket.emit('sendMessage', { room, message });
+        messageInput.value = '';
+      }
+    }
+
+    // 接收消息
+    socket.on('messageReceived', (message) => {
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.innerHTML += `<p>${message}</p>`;
+    });
+
+    // 房间创建成功
+    socket.on('roomCreated', (roomName) => {
+      console.log(`Room "${roomName}" created`);
+    });
+  </script>
+</body>
+
+</html>
